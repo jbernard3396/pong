@@ -31,9 +31,6 @@ function _draw()
   draw(player2)
   draw(decorations)
   effect(decorations)
-  if ball and ball.mvx<0 and ball.hits<ball.grace then
-	  --draw_path(0, true) for some reason this doesn't draw towards player well
-	 end
  end
  --debug()
 end
@@ -123,7 +120,7 @@ function ball_coroutine()
      ball.hits += 1
     end
     ball.mvy = ball.mvy + paddle_bounce(hit_paddle())/10
-    ball.mvx = -ball.mvx*1.05
+    ball.mvx = max(min(-ball.mvx*1.05, 10), -10)
     ball.x += abs(ball.mvx)/ball.mvx  
    end
    if out_x(ball.x) then --point
@@ -368,12 +365,12 @@ function in_x(x)
 end
 
 function hit_paddle()
- if (ball.x > player1.x+player_half_width and ball.x < player1.x+player_half_width+ball.r) then
+ if (ball.x > player1.x-player_half_width-ball.r and ball.x < player1.x+player_half_width+ball.r) then
   if (ball.y > player1.y-player_half_length-ball.d and ball.y < player1.y+player_half_length+ball.d) then
    return player1
   end
  end
- if (ball.x > player2.x+player_half_width-ball.r and ball.x < player2.x+player_half_width) then
+ if (ball.x < player2.x+player_half_width+ball.r and ball.x > player2.x-player_half_width-ball.r) then
   if (ball.y > player2.y-player_half_length-ball.d and ball.y < player2.y+player_half_length+ball.d) then
    return player2
   end
@@ -419,7 +416,7 @@ function explosion()
   local size = max((abs(ball.mvy)+abs(ball.mvx))*5, 5)
   for i = 1, size do
   working = i
-   circ(x, y, i, scheme+3) --should create a function that calls this function
+   --circ(x, y, i, scheme+3) --should create a function that calls this function
    yield()
   end
  end)
@@ -432,18 +429,24 @@ function draw_path(p, visible)
  end
  local bx = ball.x
  local by = ball.y
+ local p1y = player1.y
+ local p2y = player2.y
  local bmvx = ball.mvx
  local bmvy = ball.mvy
  limit = 0
  if p == 0 then
   limit = abs((ball.x-player1.x-5)/ball.mvx)
- else
+ elseif p == 1 then
   limit = (player2.x-2-ball.x)/ball.mvx
+ elseif p == 3 then
+  limit = abs((ball.x-player1.x-5)/ball.mvx)+(((player2.x-2-ball.x))/ball.mvx)
  end
  for i = 0, limit do
   if (ball_c and costatus(ball_c)) then
    coresume(ball_c) 
    pset(ball.x, ball.y, scheme+2)
+   player1.y = ball.y
+   player2.y = ball.y
   end
  end
  end_y = ball.y --localize
@@ -451,6 +454,8 @@ function draw_path(p, visible)
  ball.y = by
  ball.mvx = bmvx
  ball.mvy = bmvy
+ player1.y=p1y
+ player2.y=p2y
  return end_y
 end
 -->8
@@ -504,16 +509,21 @@ end
 function hard_ai(p)
  p.kind = 'hard_ai'
  p.controls = {}
- p.spd -= 1
  mv_up = function()
   if ball.mvx > 0 then
    prediction = draw_path(1, false)
+   return prediction > p.y + p.spd
+  else 
+   prediction = draw_path(3, false)
    return prediction > p.y + p.spd
   end
  end
  mv_down = function()
   if ball.mvx > 0 then
    prediction = draw_path(1, false)
+   return prediction < p.y - p.spd
+  else 
+   prediction = draw_path(3, false)
    return prediction < p.y - p.spd
   end
  end
@@ -526,6 +536,11 @@ function debug()
  if ball then
   print(ball.hits, 20, 20, 7)
   print(ball.grace, 20, 30, 7)
+  print(ball.mvx, 20, 40, 7)
  end
 
 end
+-->8
+--docs
+--seperate ball from line drawing
+
